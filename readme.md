@@ -230,3 +230,4 @@ public interface Collector<T, A, R> {
 
 link
 [小蓝鲸](https://club.perfma.com/article/116123)
+[吴江法-stream](https://github.com/wujiangfa-xlauncher/stream-for-go)
