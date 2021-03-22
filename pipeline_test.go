@@ -19,7 +19,7 @@ func (s student) String() string {
 }
 
 func createStudents() []student {
-	names := []string{"Tom-0", "Kate-1", "Lucy-2", "Jim-3", "Jack-4", "King-5", "Lee-6", "Mask-7","Mask-8","Mask-9"}
+	names := []string{"Tom-0", "Kate-1", "Lucy-2", "Jim-3", "Jack-4", "King-5", "Lee-6", "Mask-7", "Mask-8", "Mask-9"}
 	students := make([]student, 10)
 	rnd := func(start, end int) int { return rand.Intn(end-start) + start }
 	for i := 0; i <= 9; i++ {
@@ -69,7 +69,6 @@ func TestMap(t *testing.T) {
 		ForEach(func(v interface{}) { fmt.Println(v) })
 }
 
-
 func TestFilter(t *testing.T) {
 	students := createStudents()
 	stream := New(students, false)
@@ -92,7 +91,7 @@ func TestSkip(t *testing.T) {
 	stream.Skip(3).ForEach(func(v interface{}) { fmt.Println(v) })
 }
 
-func TestPage(t *testing.T){
+func TestPage(t *testing.T) {
 	students := createStudents()
 	stream := New(students, false)
 
@@ -103,20 +102,22 @@ func TestPage(t *testing.T){
 		ForEach(func(v interface{}) { fmt.Println(v) })
 }
 
-func TestDistinct(t *testing.T){
+func TestDistinct(t *testing.T) {
 	students := createStudents()
-	students[3], students[5] = students[0],students[0]
+	students[3], students[5], students[9] = students[0], students[0], students[0]
 	New(students, false).
 		Map(func(v interface{}) interface{} {
 			s := v.(student)
 			s.age += 100
 			return s
 		}).
-		Distinct().
+		Distinct(func(s1 interface{}, s2 interface{}) bool {
+			return reflect.DeepEqual(s1, s2)
+		}).
 		ForEach(func(v interface{}) { fmt.Println(v) })
 }
 
-func TestSorted(t *testing.T){
+func TestSorted(t *testing.T) {
 	students := createStudents()
 	New(students, false).
 		Map(func(v interface{}) interface{} {
@@ -124,7 +125,8 @@ func TestSorted(t *testing.T){
 			s.age += 100
 			return s
 		}).
-		Sorted(func (s1 interface{}, s2 interface{})bool{
-			return s1.(student).age > s2.(student).age}).
+		Sorted(func(s1 interface{}, s2 interface{}) bool {
+			return s1.(student).age > s2.(student).age
+		}).
 		ForEach(func(v interface{}) { fmt.Println(v) })
 }

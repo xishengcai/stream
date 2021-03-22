@@ -77,8 +77,11 @@ func (p *pipeline) Filter(fun Predicate) *pipeline {
 	return nextStage
 }
 
-func (p *pipeline) Distinct() *pipeline {
-	return statefulSetOp(p, removeDuplicate)
+func (p *pipeline) Distinct(comparator Comparator) *pipeline {
+	handle := func(v []interface{}) []interface{} {
+		return removeDuplicate(v, comparator)
+	}
+	return statefulSetOp(p, handle)
 }
 
 func (p *pipeline) FlatMap(fun Function) *pipeline {
@@ -96,12 +99,12 @@ func (p *pipeline) FlatMap(fun Function) *pipeline {
 }
 
 func (p *pipeline) Sorted(comparator Comparator) *pipeline {
-	handle := func (v []interface{})[]interface{}{
+	handle := func(v []interface{}) []interface{} {
 		s := &sortInterface{data: v, comparator: comparator}
 		sort.Sort(s)
 		return v
 	}
-	return statefulSetOp(p,handle)
+	return statefulSetOp(p, handle)
 }
 
 // limit 类似于SQL语句中的Limit
@@ -141,7 +144,7 @@ func (p *pipeline) ForEach(consumer Consumer) {
 
 }
 
-func (p *pipeline)ToArray(targetArray interface{}){
+func (p *pipeline) ToArray(targetArray interface{}) {
 
 	targetValue := reflect.ValueOf(&targetArray)
 	if targetValue.Kind() == reflect.Ptr {
@@ -178,7 +181,7 @@ func statefulSetOp(p *pipeline, handle handleData) *pipeline {
 }
 
 // removeDuplicate 数组元素去重
-func removeDuplicate(arr []interface{}) []interface{} {
+func removeDuplicate(arr []interface{}, comparator Comparator) []interface{} {
 	if arr == nil {
 		return nil
 	}
@@ -187,7 +190,7 @@ func removeDuplicate(arr []interface{}) []interface{} {
 	for i := range arr {
 		flag := true
 		for j := range result {
-			if reflect.DeepEqual(arr[i], result[j]) {
+			if comparator(arr[i], result[j]) {
 				flag = false // 存在重复元素，标识为false
 				break
 			}
