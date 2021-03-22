@@ -46,8 +46,6 @@ sandbox> exited with status 0
 
 接口和实体类介绍
 
-![1616249080425.png](./img/1616249080425.png)
-
 
 **stream pipeline**
 
@@ -68,16 +66,17 @@ Stream.of(1, 2, 5, 3, 4, 5, 6, 7, 8, 9)
 ```
 
 上例中，最终构造的pipeline如图所示，pipeline数据结构是一个双向链表，每个节点分别存储上一阶段，下一阶段，及起始阶段。终端操作前均为lazy操作，所有操作并未真正执行。而终端操作会综合所有阶段执行计算。
-![stream_pipeline](./img/stream_pipeline.png)
+![stream_pipeline](./image/stream_pipeline.png)
 
 **思考**
 1. 终结操作前均为lazy操作，所有操作并未真正执行
     
 2. 数据是如何传递的
+```
     sourceArray[0] -> headStage(sourceElement) => result
                         -> secondStage(result) => result
                            -> thirdStage(result) => result
-                            -> statefulset(result) , not pass to nextStage 
+                            -> statefulSet(result), 该阶段的do 方法内不会有 nextStage.do() ,因为该阶段会变成sourceStage
 
 
     sourceArray[1] -> headStage(sourceElement) => result
@@ -87,13 +86,18 @@ Stream.of(1, 2, 5, 3, 4, 5, 6, 7, 8, 9)
     sourceArray[2] -> headStage(sourceElement) => result
                             -> secondStage(result) => result
                             -> thirdStage(result) => result
-
+```
 
 3. 为什么需要有状态操作
 
-4. 为什么要引入操作标识位
+有状态操作是为了解决某些阶段需要全量数据才能处理，所以在类似于sort 阶段需要将上一步的数据都存到 sort 阶段的temp中，
+然后在使用sort 逻辑处理所有temp数据， 再保存到 data中。
 
-5. nextStage.do(nextStage.do, dateElement),一个元素会被每个阶段依次处理，直到遇到终止操作。然后将终止阶段设置为sourceStage。 这种设计的好处是什么？
+4. 为什么要引入操作标识位？
+
+5. nextStage.do(nextStage.do, dateElement) ？
+
+一个元素会被每个阶段依次处理，直到遇到状态操作。然后将有状态操作阶段设置为sourceStage。再继续重复，直到终止操作
 
 
 
