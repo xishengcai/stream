@@ -8,6 +8,8 @@ import (
 
 type handleData func(v []interface{}) []interface{}
 
+var _ Streamer = &pipeline{}
+
 // pipeline Streamer的子类
 type pipeline struct {
 	lock sync.Mutex
@@ -24,7 +26,7 @@ type pipeline struct {
 	depth                   int
 }
 
-func New(arr interface{}, parallel bool) *pipeline {
+func New(arr interface{}, parallel bool) Streamer {
 	data := make([]interface{}, 0)
 	dataValue := reflect.ValueOf(&data).Elem()
 
@@ -47,7 +49,7 @@ func New(arr interface{}, parallel bool) *pipeline {
 	return p
 }
 
-func (p *pipeline) Map(fun Function) *pipeline {
+func (p *pipeline) Map(fun Function) Streamer {
 	nextStage := &pipeline{
 		previousStage: p,
 		do: func(nextStage *pipeline, v interface{}) {
@@ -61,7 +63,7 @@ func (p *pipeline) Map(fun Function) *pipeline {
 
 }
 
-func (p *pipeline) Filter(fun Predicate) *pipeline {
+func (p *pipeline) Filter(fun Predicate) Streamer {
 	nextStage := &pipeline{
 		previousStage: p,
 		do: func(nextStage *pipeline, v interface{}) {
@@ -77,14 +79,14 @@ func (p *pipeline) Filter(fun Predicate) *pipeline {
 	return nextStage
 }
 
-func (p *pipeline) Distinct(comparator Comparator) *pipeline {
+func (p *pipeline) Distinct(comparator Comparator) Streamer {
 	handle := func(v []interface{}) []interface{} {
 		return removeDuplicate(v, comparator)
 	}
 	return statefulSetOp(p, handle)
 }
 
-func (p *pipeline) FlatMap(fun Function) *pipeline {
+func (p *pipeline) FlatMap(fun Function) Streamer {
 	nextStage := &pipeline{
 		previousStage: p,
 		do: func(nextStage *pipeline, v interface{}) {
@@ -98,7 +100,7 @@ func (p *pipeline) FlatMap(fun Function) *pipeline {
 	return nextStage
 }
 
-func (p *pipeline) Sorted(comparator Comparator) *pipeline {
+func (p *pipeline) Sorted(comparator Comparator) Streamer {
 	handle := func(v []interface{}) []interface{} {
 		s := &sortInterface{data: v, comparator: comparator}
 		sort.Sort(s)
@@ -109,23 +111,45 @@ func (p *pipeline) Sorted(comparator Comparator) *pipeline {
 
 // limit 类似于SQL语句中的Limit
 // 水平操作，需要拿到所有数据，也叫有状态操作
-func (p *pipeline) Limit(limit int) *pipeline {
+func (p *pipeline) Limit(limit int) Streamer {
 	handle := func(v []interface{}) []interface{} {
+		if limit > len(v) {
+			return nil
+		}
 		return v[:limit]
 	}
 	return statefulSetOp(p, handle)
 }
 
 // Skip 类似于sql语句中的indexOf， 与limit 配合可实现分页操作
-func (p *pipeline) Skip(index int) *pipeline {
+func (p *pipeline) Skip(index int) Streamer {
 
 	handle := func(v []interface{}) []interface{} {
-		if index > len(p.data)-1 {
+		if index > len(v)-1 {
 			return nil
 		}
 		return v[index:]
 	}
 	return statefulSetOp(p, handle)
+}
+
+func (p *pipeline) Reduce(reduceFun ReduceFun) interface{} {
+	handle := func(v []interface{}) []interface{} {
+		return v
+	}
+	currentStage := statefulSetOp(p, handle)
+
+	if len(currentStage.data) == 0 {
+		return nil
+	} else if len(currentStage.data) == 1 {
+		return currentStage.data
+	}
+	result := currentStage.data[0]
+	for _, item := range currentStage.data[1:] {
+		result = reduceFun(result, item)
+	}
+	return result
+
 }
 
 func (p *pipeline) ForEach(consumer Consumer) {
@@ -144,9 +168,9 @@ func (p *pipeline) ForEach(consumer Consumer) {
 
 }
 
-func (p *pipeline) ToArray(targetArray interface{}) {
+func (p *pipeline) ToSlice(target interface{}) {
 
-	targetValue := reflect.ValueOf(&targetArray)
+	targetValue := reflect.ValueOf(&target)
 	if targetValue.Kind() == reflect.Ptr {
 		targetValue = targetValue.Elem()
 	}

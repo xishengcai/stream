@@ -2,7 +2,7 @@ package stream
 
 import "sort"
 
-var _ sort.Interface = (*sortInterface)(nil)
+var _ sort.Interface = &sortInterface{}
 
 type sortInterface struct {
 	data       []interface{}

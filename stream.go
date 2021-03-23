@@ -13,14 +13,14 @@ type Streamer interface {
 	//FlatMap(function Function) Streamer
 
 	Distinct(comparator Comparator) Streamer
-	Sorted(function Function) Streamer
+	Sorted(comparator Comparator) Streamer
 	Limit(limit int) Streamer
 	Skip(index int) Streamer
 
 	/*
 		终止操作，触发流水线真正的执行动作，无返回值。
 	*/
-	Reduce(reduceFun ReduceFun)
+	Reduce(reduceFun ReduceFun) interface{}
 	ForEach(consumer Consumer)
 	ToSlice(targetSlice interface{})
 }

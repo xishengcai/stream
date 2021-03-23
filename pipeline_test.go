@@ -130,3 +130,23 @@ func TestSorted(t *testing.T) {
 		}).
 		ForEach(func(v interface{}) { fmt.Println(v) })
 }
+
+func TestReduce(t *testing.T) {
+	students := createStudents()
+	s := New(students, false).
+		Sorted(func(s1 interface{}, s2 interface{}) bool {
+			return s1.(student).age > s2.(student).age
+		}).
+		Map(func(v interface{}) interface{} {
+			return v.(student).age
+		}).
+		Skip(3).
+		Limit(3)
+
+	s.ForEach(func(v interface{}) { fmt.Println(v) })
+
+	sumAge := s.Reduce(func(i interface{}, j interface{}) interface{} {
+		return i.(int) + j.(int)
+	})
+	t.Log(sumAge)
+}
