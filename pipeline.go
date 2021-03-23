@@ -193,6 +193,8 @@ func statefulSetOp(p *pipeline, handle handleData) *pipeline {
 	nextStage := &pipeline{
 		previousStage: p,
 		do: func(nextStage *pipeline, v interface{}) {
+			p.lock.Lock()
+			defer p.lock.Unlock()
 			p.temp = append(p.temp, v)
 		},
 		depth: p.depth + 1,

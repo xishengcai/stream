@@ -4,7 +4,9 @@ import (
 	"fmt"
 	"math/rand"
 	"reflect"
+	"runtime"
 	"testing"
+	"time"
 )
 
 type student struct {
@@ -18,16 +20,16 @@ func (s student) String() string {
 	return fmt.Sprintf("{id:%d, name:%s, age:%d,scores:%v}", s.id, s.name, s.age, s.scores)
 }
 
-func createStudents() []student {
-	names := []string{"Tom-0", "Kate-1", "Lucy-2", "Jim-3", "Jack-4", "King-5", "Lee-6", "Mask-7", "Mask-8", "Mask-9"}
-	students := make([]student, 10)
+func createStudents(num int) []student {
+	names := []string{"Tom", "Kate", "Lucy", "Jim", "Jack", "King", "Lee", "Mask", "Mask", "Mask"}
+	students := make([]student, num)
 	rnd := func(start, end int) int { return rand.Intn(end-start) + start }
-	for i := 0; i <= 9; i++ {
+	for i := 0; i < num; i++ {
 		students[i] = student{
 			id:     i,
-			name:   names[i],
+			name:   names[rnd(0,9)],
 			age:    rnd(0, 100),
-			scores: []int{rnd(60, 100), rnd(60, 100), rnd(60, 100)},
+			scores: []int{rnd(0, 100), rnd(0, 100), rnd(0, 100)},
 		}
 	}
 	return students
@@ -57,7 +59,7 @@ func TestReflect(tt *testing.T) {
 }
 
 func TestMap(t *testing.T) {
-	students := createStudents()
+	students := createStudents(10)
 
 	stream := New(students, false)
 	stream.
@@ -70,7 +72,7 @@ func TestMap(t *testing.T) {
 }
 
 func TestFilter(t *testing.T) {
-	students := createStudents()
+	students := createStudents(10)
 	stream := New(students, false)
 	stream.
 		Filter(func(v interface{}) bool {
@@ -80,19 +82,19 @@ func TestFilter(t *testing.T) {
 }
 
 func TestLimit(t *testing.T) {
-	students := createStudents()
+	students := createStudents(10)
 	stream := New(students, false)
 	stream.Limit(5).ForEach(func(v interface{}) { fmt.Println(v) })
 }
 
 func TestSkip(t *testing.T) {
-	students := createStudents()
+	students := createStudents(10)
 	stream := New(students, false)
 	stream.Skip(3).ForEach(func(v interface{}) { fmt.Println(v) })
 }
 
 func TestPage(t *testing.T) {
-	students := createStudents()
+	students := createStudents(10)
 	stream := New(students, false)
 
 	// except last 5 item
@@ -103,7 +105,7 @@ func TestPage(t *testing.T) {
 }
 
 func TestDistinct(t *testing.T) {
-	students := createStudents()
+	students := createStudents(10)
 	students[3], students[5], students[9] = students[0], students[0], students[0]
 	New(students, false).
 		Map(func(v interface{}) interface{} {
@@ -118,7 +120,7 @@ func TestDistinct(t *testing.T) {
 }
 
 func TestSorted(t *testing.T) {
-	students := createStudents()
+	students := createStudents(10)
 	New(students, false).
 		Map(func(v interface{}) interface{} {
 			s := v.(student)
@@ -132,21 +134,36 @@ func TestSorted(t *testing.T) {
 }
 
 func TestReduce(t *testing.T) {
-	students := createStudents()
-	s := New(students, false).
-		Sorted(func(s1 interface{}, s2 interface{}) bool {
-			return s1.(student).age > s2.(student).age
+	students := createStudents(10)
+	sumAge:= New(students, false).
+		Map(func(v interface{}) interface{} {
+			time.Sleep(time.Second * 1 )
+			return v
 		}).
 		Map(func(v interface{}) interface{} {
 			return v.(student).age
-		}).
-		Skip(3).
-		Limit(3)
-
-	s.ForEach(func(v interface{}) { fmt.Println(v) })
-
-	sumAge := s.Reduce(func(i interface{}, j interface{}) interface{} {
+		}).Reduce(func(i interface{}, j interface{}) interface{} {
 		return i.(int) + j.(int)
 	})
+
 	t.Log(sumAge)
 }
+
+func TestReduceParallel(t *testing.T) {
+	cpus := runtime.NumCPU()
+	runtime.GOMAXPROCS(cpus)
+	students := createStudents(100000)
+	sumAge:= New(students, true).
+		Map(func(v interface{}) interface{} {
+			time.Sleep(time.Second * 1 )
+			return v
+		}).
+		Map(func(v interface{}) interface{} {
+			return v.(student).age
+		}).Reduce(func(i interface{}, j interface{}) interface{} {
+		return i.(int) + j.(int)
+	})
+
+	t.Log(sumAge)
+}
+
