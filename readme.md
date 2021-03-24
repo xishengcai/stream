@@ -35,14 +35,14 @@ stream表示包含着一系列元素的集合，我们可以对其做不同类�
 - [x] ForEach
 - [x] ToSlice
 - [x] count
-- [] max
-- [] min
-- [] forEachOrdered
-- [] anyMatch
-- [] allMatch
-- [] noneMatch
-- [] findFirst
-- [] findAny
+- [ ] max
+- [ ] min
+- [ ] forEachOrdered
+- [ ] anyMatch
+- [ ] allMatch
+- [ ] noneMatch
+- [ ] findFirst
+- [ ] findAny
 
 ## 待改进
 - reduce 并发计算，是否有
