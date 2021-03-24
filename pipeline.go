@@ -6,6 +6,7 @@ import (
 	"sync"
 )
 
+// handleData 对temp数据进行处理的函数， 处理后的结果存入pipeline.data
 type handleData func(v []interface{}) []interface{}
 
 var _ Streamer = &pipeline{}
@@ -50,7 +51,7 @@ func New(arr interface{}, parallel bool) Streamer {
 }
 
 func (p *pipeline) Map(fun Function) Streamer {
-	nextStage := &pipeline{
+	p.nextStage = &pipeline{
 		previousStage: p,
 		do: func(nextStage *pipeline, v interface{}) {
 			nextStage.do(nextStage.nextStage, fun(v))
@@ -58,13 +59,12 @@ func (p *pipeline) Map(fun Function) Streamer {
 		sourceStage: p.sourceStage,
 		depth:       p.depth + 1,
 	}
-	p.nextStage = nextStage
-	return nextStage
+	return p.nextStage
 
 }
 
 func (p *pipeline) Filter(fun Predicate) Streamer {
-	nextStage := &pipeline{
+	p.nextStage = &pipeline{
 		previousStage: p,
 		do: func(nextStage *pipeline, v interface{}) {
 			if fun(v) {
@@ -74,9 +74,7 @@ func (p *pipeline) Filter(fun Predicate) Streamer {
 		sourceStage: p.sourceStage,
 		depth:       p.depth + 1,
 	}
-	p.nextStage = nextStage
-
-	return nextStage
+	return p.nextStage
 }
 
 func (p *pipeline) Distinct(comparator Comparator) Streamer {
@@ -86,18 +84,18 @@ func (p *pipeline) Distinct(comparator Comparator) Streamer {
 	return statefulSetOp(p, handle)
 }
 
+//
 func (p *pipeline) FlatMap(fun Function) Streamer {
-	nextStage := &pipeline{
+	p.nextStage = &pipeline{
 		previousStage: p,
 		do: func(nextStage *pipeline, v interface{}) {
-			nextStage.do(nextStage.nextStage, fun(v))
+			// TODO
 		},
 		sourceStage: p.sourceStage,
 		depth:       p.depth + 1,
 	}
-	p.nextStage = nextStage
 
-	return nextStage
+	return p.nextStage
 }
 
 func (p *pipeline) Sorted(comparator Comparator) Streamer {
@@ -153,8 +151,7 @@ func (p *pipeline) Reduce(reduceFun ReduceFun) interface{} {
 }
 
 func (p *pipeline) ForEach(consumer Consumer) {
-
-	nextStage := &pipeline{
+	p.nextStage = &pipeline{
 		previousStage: p,
 		do: func(nextStage *pipeline, v interface{}) {
 			consumer(v)
@@ -162,28 +159,36 @@ func (p *pipeline) ForEach(consumer Consumer) {
 		sourceStage: p.sourceStage,
 		depth:       p.depth + 1,
 	}
-	p.nextStage = nextStage
-
 	terminal{}.evaluate(p.sourceStage)
 
 }
 
 func (p *pipeline) ToSlice(target interface{}) {
+	targetValue := reflect.ValueOf(target)
+	if targetValue.Kind() != reflect.Ptr {
+		panic("target slice must be a pointer")
+	}
+	sliceValue := reflect.Indirect(targetValue)
+	p.nextStage = &pipeline{
+		previousStage: p,
+		sourceStage:   p.sourceStage,
+		do: func(nextStage *pipeline, v interface{}) {
+			if p.sourceStage.parallel {
+				p.lock.Lock()
+				defer p.lock.Unlock()
+			}
+			sliceValue.Set(reflect.Append(sliceValue, reflect.ValueOf(v)))
+		},
+	}
+	terminal{}.evaluate(p.sourceStage)
+}
 
-	targetValue := reflect.ValueOf(&target)
-	if targetValue.Kind() == reflect.Ptr {
-		targetValue = targetValue.Elem()
+func (p *pipeline) Count() int{
+	handle := func(v []interface{}) []interface{} {
+		return v
 	}
-
-	arrValue := reflect.ValueOf(p.data)
-	if arrValue.Kind() == reflect.Ptr {
-		arrValue = arrValue.Elem()
-	}
-	if arrValue.Kind() == reflect.Slice || arrValue.Kind() == reflect.Array {
-		for i := 0; i < arrValue.Len(); i++ {
-			targetValue.Set(reflect.Append(targetValue, arrValue.Index(i)))
-		}
-	}
+	currentStage := statefulSetOp(p, handle)
+	return len(currentStage.data)
 }
 
 // statefulSetOp 装饰器，

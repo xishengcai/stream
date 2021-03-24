@@ -2,9 +2,9 @@ package stream
 
 import (
 	"fmt"
+	"github.com/magiconair/properties/assert"
 	"math/rand"
 	"reflect"
-	"runtime"
 	"testing"
 	"time"
 )
@@ -150,8 +150,6 @@ func TestReduce(t *testing.T) {
 }
 
 func TestReduceParallel(t *testing.T) {
-	cpus := runtime.NumCPU()
-	runtime.GOMAXPROCS(cpus)
 	students := createStudents(100000)
 	sumAge:= New(students, true).
 		Map(func(v interface{}) interface{} {
@@ -167,3 +165,34 @@ func TestReduceParallel(t *testing.T) {
 	t.Log(sumAge)
 }
 
+func TestCount(t *testing.T){
+	students := createStudents(1000)
+
+	count := New(students, false).
+		Map(func(v interface{}) interface{} {
+			return v.(student).age
+		}).
+		Skip(5000).
+		Count()
+	assert.Equal(t,count, 0)
+
+	count = New(students, false).
+		Map(func(v interface{}) interface{} {
+			return v.(student).age
+		}).
+		Limit(100).
+		Count()
+
+	assert.Equal(t, count, 100)
+}
+
+func TestSlice(t *testing.T){
+	students := createStudents(10)
+	sts := make([]student,10)
+
+	New(students, false).
+		Skip(2).
+		ToSlice(&sts)
+
+	t.Log(sts)
+}

@@ -23,6 +23,7 @@ type Streamer interface {
 	Reduce(reduceFun ReduceFun) interface{}
 	ForEach(consumer Consumer)
 	ToSlice(targetSlice interface{})
+	Count() int
 }
 
 // PredicateOp 断言
