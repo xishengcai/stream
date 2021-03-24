@@ -47,27 +47,6 @@ sandbox> exited with status 0
 接口和实体类介绍
 
 
-**stream pipeline**
-
-Stream的执行过程被抽象出一个pipeline的概念，每个pipeline会包含不同的阶段（stage） 
-
-- 起始阶段（source stage），有且只有一个，Stream创建的时候即被创建，比如：通过Stream.of接口创建时，会实例化ReferencePipeline.Head作为Stream的起始阶段，
-
-- 过程阶段(intermediate stage)，0个或多个，如下例中包含两个过程阶段：distinct、map，parallel是一个特殊的存在，它只是设置一个标志位， 并不是一个过程阶段。对于过程阶段的各种操作，又有无状态操作(StatelessOp)和有状态操作(StatefulOp)之分, 比如：对于distinct、dropWhile、sorted需要在执行过程种记录执行状态，即有状态操作，而map、filter则属于无状态操作; 
-
-- 终结阶段(terminal stage)，有且仅有一个，用于结果计算或者执行一些副作用，如下例中的forEach
-
-```
-Stream.of(1, 2, 5, 3, 4, 5, 6, 7, 8, 9)
-                .distinct()
-                .parallel()
-                .map(item -> item * 2)
-                .forEach(item -> System.out.print(item + " "));
-```
-
-上例中，最终构造的pipeline如图所示，pipeline数据结构是一个双向链表，每个节点分别存储上一阶段，下一阶段，及起始阶段。终端操作前均为lazy操作，所有操作并未真正执行。而终端操作会综合所有阶段执行计算。
-![stream_pipeline](../image/stream_pipeline.png)
-
 **思考**
 1. 终结操作前均为lazy操作，所有操作并未真正执行
     
@@ -226,9 +205,3 @@ public interface Collector<T, A, R> {
     Map，filter
 
     ToSlice
-
-
-**link**
-- [小蓝鲸](https://club.perfma.com/article/116123)
-- [吴江法-stream](https://github.com/wujiangfa-xlauncher/stream-for-go)
-- [stream 高级用法](https://juejin.cn/post/6844903830254010381#heading-7)
