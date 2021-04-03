@@ -5,6 +5,7 @@ import (
 	"github.com/magiconair/properties/assert"
 	"math/rand"
 	"reflect"
+	"strings"
 	"testing"
 	"time"
 )
@@ -27,7 +28,7 @@ func createStudents(num int) []student {
 	for i := 0; i < num; i++ {
 		students[i] = student{
 			id:     i,
-			name:   names[rnd(0,9)],
+			name:   names[rnd(0, 9)],
 			age:    rnd(0, 100),
 			scores: []int{rnd(0, 100), rnd(0, 100), rnd(0, 100)},
 		}
@@ -69,6 +70,18 @@ func TestMap(t *testing.T) {
 			return s
 		}).
 		ForEach(func(v interface{}) { fmt.Println(v) })
+}
+
+func TestFlatMap(t *testing.T) {
+	stream := New([]string{"hello", "world"}, false).
+		Map(func(v interface{}) interface{} {
+			return strings.Split(v.(string), "")
+		}).FlatMap(func(v interface{}) Streamer {
+		return New(v, false)
+	}).Distinct(func(s1 interface{}, s2 interface{}) bool {
+		return reflect.DeepEqual(s1, s2)
+	})
+	stream.ForEach(func(v interface{}) { fmt.Println(v) })
 }
 
 func TestFilter(t *testing.T) {
@@ -135,9 +148,9 @@ func TestSorted(t *testing.T) {
 
 func TestReduce(t *testing.T) {
 	students := createStudents(10)
-	sumAge:= New(students, false).
+	sumAge := New(students, false).
 		Map(func(v interface{}) interface{} {
-			time.Sleep(time.Second * 1 )
+			time.Sleep(time.Second * 1)
 			return v
 		}).
 		Map(func(v interface{}) interface{} {
@@ -151,9 +164,9 @@ func TestReduce(t *testing.T) {
 
 func TestReduceParallel(t *testing.T) {
 	students := createStudents(100000)
-	sumAge:= New(students, true).
+	sumAge := New(students, true).
 		Map(func(v interface{}) interface{} {
-			time.Sleep(time.Second * 1 )
+			time.Sleep(time.Second * 1)
 			return v
 		}).
 		Map(func(v interface{}) interface{} {
@@ -165,7 +178,7 @@ func TestReduceParallel(t *testing.T) {
 	t.Log(sumAge)
 }
 
-func TestCount(t *testing.T){
+func TestCount(t *testing.T) {
 	students := createStudents(1000)
 
 	count := New(students, false).
@@ -174,7 +187,7 @@ func TestCount(t *testing.T){
 		}).
 		Skip(5000).
 		Count()
-	assert.Equal(t,count, 0)
+	assert.Equal(t, count, 0)
 
 	count = New(students, false).
 		Map(func(v interface{}) interface{} {
@@ -186,9 +199,9 @@ func TestCount(t *testing.T){
 	assert.Equal(t, count, 100)
 }
 
-func TestSlice(t *testing.T){
+func TestSlice(t *testing.T) {
 	students := createStudents(10)
-	sts := make([]student,10)
+	sts := make([]student, 10)
 
 	New(students, false).
 		Skip(2).

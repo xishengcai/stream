@@ -4,13 +4,14 @@ import "sync"
 
 // terminalOperator 串、并行接口
 type terminalOperator interface {
-	evaluateSequential(streamer *Streamer)
+	sequential(streamer *Streamer)
 	evaluateParallel(streamer *Streamer)
 }
 
 type terminal struct{}
 
-func (t terminal) evaluate(sourceStreamer *pipeline) {
+func (t terminal) evaluate(streamer Streamer) {
+	sourceStreamer := streamer.(*pipeline)
 	if sourceStreamer.nextStage == nil {
 		return
 	}

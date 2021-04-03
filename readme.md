@@ -121,5 +121,6 @@ result
 - [小蓝鲸](https://club.perfma.com/article/116123)
 - [吴江法-stream](https://github.com/wujiangfa-xlauncher/stream-for-go)
 - [stream 高级用法](https://juejin.cn/post/6844903830254010381#heading-7)
+- [flatMap](https://www.jianshu.com/p/dc5202688dc8)
 
 

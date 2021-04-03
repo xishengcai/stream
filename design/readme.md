@@ -1,5 +1,5 @@
 ## 前言
-golang copy java 轮子(java.util.stream)。
+
 Stream是java SE8 API添加的用于增加集合的操作接口，可以让你以一种声明的方式处理集合数据。将要处理的集合看作一种流的创建者，将集合内部的元素转换为流并且在管道中传输，并且可以在管道的节点上处理，比如筛选，排序，聚合等。元素流在管道内经过中间操作（intermediate operation）的处理，最后由终端操作（terminal operation）得到前面处理的结果。
 
 sample example of stream
@@ -41,35 +41,14 @@ sandbox> exited with status 0
 ```
 
 ## java stream 源码解析
-接口总浏
-
 
 接口和实体类介绍
 
-
 **思考**
 1. 终结操作前均为lazy操作，所有操作并未真正执行
-    
 2. 数据是如何传递的
-```
-    sourceArray[0] -> headStage(sourceElement) => result
-                        -> secondStage(result) => result
-                           -> thirdStage(result) => result
-                            -> statefulSet(result), 该阶段的do 方法内不会有 nextStage.do() ,因为该阶段会变成sourceStage
-
-
-    sourceArray[1] -> headStage(sourceElement) => result
-                        -> secondStage(result) => result
-                           -> thirdStage(result) => result
-
-    sourceArray[2] -> headStage(sourceElement) => result
-                            -> secondStage(result) => result
-                            -> thirdStage(result) => result
-```
-
 3. 为什么需要有状态操作
-
-有状态操作是为了解决某些阶段需要全量数据才能处理，所以在类似于sort 阶段需要将上一步的数据都存到 sort 阶段的temp中，
+    有状态操作是为了解决某些阶段需要全量数据才能处理，所以在类似于sort 阶段需要将上一步的数据都存到 sort 阶段的temp中，
 然后在使用sort 逻辑处理所有temp数据， 再保存到 data中。
 
 4. 为什么要引入操作标识位？
@@ -119,6 +98,9 @@ public static <T> Stream<T> stream(Spliterator<T> spliterator, boolean parallel)
 
 
 ## 代码阅读
+
+![1616632201688.png](./img/1616632201688.png)
+
 ### file：BaseStream.java
 ```java
 public interface BaseStream<T, S extends BaseStream<T, S>>
@@ -132,6 +114,37 @@ public interface BaseStream<T, S extends BaseStream<T, S>>
     S unordered();
     S onClose(Runnable closeHandler);
 }
+```
+
+### file: Stream.java
+该文件定义了接口
+![1616630471007.png](./img/1616630471007.png)
+
+### java.util.stream.ReferencePipeline
+ReferencePipeline 继承了AbstractPipeline， 实现了Stream 接口
+```java
+abstract class ReferencePipeline<P_IN, P_OUT>
+        extends AbstractPipeline<P_IN, P_OUT, Stream<P_OUT>>
+        implements Stream<P_OUT>{}
+```
+
+下面一段代码是Map方法的具体实现
+```java
+    public final <R> Stream<R> map(Function<? super P_OUT, ? extends R> mapper) {
+        Objects.requireNonNull(mapper);
+        return new StatelessOp<P_OUT, R>(this, StreamShape.REFERENCE,
+                                     StreamOpFlag.NOT_SORTED | StreamOpFlag.NOT_DISTINCT) {
+            @Override
+            Sink<P_OUT> opWrapSink(int flags, Sink<R> sink) {
+                return new Sink.ChainedReference<P_OUT, R>(sink) {
+                    @Override
+                    public void accept(P_OUT u) {
+                        downstream.accept(mapper.apply(u));
+                    }
+                };
+            }
+        };
+    }
 ```
 
 ### file: collector.java
@@ -186,22 +199,29 @@ public interface Collector<T, A, R> {
 ```
 
 
+## 源码数据执行步骤
+终止操作执行 evaluate 方法
+    执行AbstractPipeline抽象类 wrapAndCopyInto
+        copyInto
+            wrapSink
 
-## 构思
-1. 定义接口
-2. 定义实体类
-    定义 属性
 
-3. 实现逻辑
-    链表数据结构，terminal operation 向上执行
+        //具体实现
+        List<String> res = Arrays.stream(strArray)
+                .map(w -> w.split(""))
+                .flatMap(Arrays::stream)
+                .distinct()
+                .collect(Collectors.toList());
 
-    source
-        next.do
-            next.do
-    execute（stream)
-    nextStage.do(nextStage, func(v))
-        nextStage.do(nextStage, func(v))
 
-    Map，filter
+1. ReferencePipeline.collect 
+    -> public final <R, A> R collect(Collector<? super P_OUT, A, R> collector)
+       内部调用 container = evaluate(ReduceOps.makeRef(collector));
+    -> final <R> R evaluate(TerminalOp<E_OUT, R> terminalOp) 
+       内部调用：
+        并发：terminalOp.evaluateParallel(this, sourceSpliterator(terminalOp.getOpFlags()))
+        非并发：terminalOp.evaluateSequential(this, sourceSpliterator(terminalOp.getOpFlags()));
 
-    ToSlice
+    -> <P_IN> R evaluateSequential(PipelineHelper<E_IN> helper,
+                                Spliterator<P_IN> spliterator);
+        

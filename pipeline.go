@@ -27,7 +27,7 @@ type pipeline struct {
 	depth                   int
 }
 
-func New(arr interface{}, parallel bool) Streamer {
+func newPipeline(arr interface{}, parallel bool) *pipeline {
 	data := make([]interface{}, 0)
 	dataValue := reflect.ValueOf(&data).Elem()
 
@@ -48,19 +48,38 @@ func New(arr interface{}, parallel bool) Streamer {
 	}
 	p.sourceStage = p
 	return p
+
 }
 
-func (p *pipeline) Map(fun Function) Streamer {
+func New(arr interface{}, parallel bool) Streamer {
+	return newPipeline(arr, parallel)
+}
+
+func (p *pipeline) Map(function Function) Streamer {
 	p.nextStage = &pipeline{
 		previousStage: p,
 		do: func(nextStage *pipeline, v interface{}) {
-			nextStage.do(nextStage.nextStage, fun(v))
+			nextStage.do(nextStage.nextStage, function(v))
 		},
 		sourceStage: p.sourceStage,
 		depth:       p.depth + 1,
 	}
 	return p.nextStage
+}
 
+func (p *pipeline) FlatMap(beStreamer BeStreamer) Streamer {
+	p.nextStage = &pipeline{
+		previousStage: p,
+		do: func(nextStage *pipeline, v interface{}) {
+			p := beStreamer(v).(*pipeline)
+			for _, item := range p.data {
+				nextStage.do(nextStage.nextStage, item)
+			}
+		},
+		sourceStage: p.sourceStage,
+		depth:       p.depth + 1,
+	}
+	return p.nextStage
 }
 
 func (p *pipeline) Filter(fun Predicate) Streamer {
@@ -82,20 +101,6 @@ func (p *pipeline) Distinct(comparator Comparator) Streamer {
 		return removeDuplicate(v, comparator)
 	}
 	return statefulSetOp(p, handle)
-}
-
-//
-func (p *pipeline) FlatMap(fun Function) Streamer {
-	p.nextStage = &pipeline{
-		previousStage: p,
-		do: func(nextStage *pipeline, v interface{}) {
-			// TODO
-		},
-		sourceStage: p.sourceStage,
-		depth:       p.depth + 1,
-	}
-
-	return p.nextStage
 }
 
 func (p *pipeline) Sorted(comparator Comparator) Streamer {
@@ -163,6 +168,8 @@ func (p *pipeline) ForEach(consumer Consumer) {
 
 }
 
+// ToSlice, this operation may be panic when your target is not point or
+// type of target not equal the type of stream transform data
 func (p *pipeline) ToSlice(target interface{}) {
 	targetValue := reflect.ValueOf(target)
 	if targetValue.Kind() != reflect.Ptr {
@@ -183,7 +190,7 @@ func (p *pipeline) ToSlice(target interface{}) {
 	terminal{}.evaluate(p.sourceStage)
 }
 
-func (p *pipeline) Count() int{
+func (p *pipeline) Count() int {
 	handle := func(v []interface{}) []interface{} {
 		return v
 	}
@@ -206,6 +213,7 @@ func statefulSetOp(p *pipeline, handle handleData) *pipeline {
 	}
 	p.nextStage = nextStage
 	terminal{}.evaluate(p.sourceStage)
+
 	nextStage.data = handle(p.temp)
 	nextStage.sourceStage = nextStage
 	return nextStage

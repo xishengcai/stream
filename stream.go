@@ -1,5 +1,10 @@
 package stream
 
+type BaseStreamer interface {
+	evaluateParallel()
+	parallel()
+}
+
 // Streamer 数据流接口
 type Streamer interface {
 	/*
@@ -10,7 +15,7 @@ type Streamer interface {
 	Map(function Function) Streamer
 	Filter(predicate Predicate) Streamer
 	//FindFirst(predicate Predicate) Streamer
-	//FlatMap(function Function) Streamer
+	FlatMap(beStreamer BeStreamer) Streamer
 
 	Distinct(comparator Comparator) Streamer
 	Sorted(comparator Comparator) Streamer
@@ -40,3 +45,6 @@ type ReduceFun func(i, j interface{}) interface{}
 
 // Function 普通方法
 type Function func(v interface{}) interface{}
+
+// Stream 构造流方法
+type BeStreamer func(v interface{}) Streamer
