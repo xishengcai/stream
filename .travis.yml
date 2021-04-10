@@ -8,7 +8,8 @@ before_install:
   - go get -t -v ./...
 
 script:
-  - go test -race -coverprofile=coverage.txt -covermode=atomic
-
+  - go test -count=1 -coverpkg=models -covermode=count -coverprofile=coverprofile.cov -run="^Test" -coverpkg=./... ./...
+  - go tool cover -func=coverprofile.cov -o coverage.txt
+  -
 after_success:
   - bash <(curl -s https://codecov.io/bash)

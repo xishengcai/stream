@@ -27,4 +27,10 @@ OK		= echo ${TIME} ${GREEN}[ OK ]${CNone}
 FAIL	= (echo ${TIME} ${RED}[FAIL]${CNone} && false)
 
 test:
-	go test --cover
+	go test -count=1 -coverpkg=models -covermode=count -coverprofile=coverprofile.cov -run="^Test" -coverpkg=./... ./...
+	go tool cover -func=coverprofile.cov -o coverage.txt
+
+upload-test:
+	bash <(curl -s https://codecov.io/bash)
+
+

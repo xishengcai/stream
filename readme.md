@@ -1,4 +1,4 @@
-[![codecov](https://codecov.io/gh/xisehngcai/stream/branch/master/graph/badge.svg)](https://codecov.io/gh/xishengcai/stream)
+[![codecov](https://codecov.io/gh/xishengcai/stream/branch/master/graph/badge.svg?token=J94BNG9F8W)](https://codecov.io/gh/xishengcai/stream)
 
 ## 前言
 golang copy java 轮子(java.util.stream)。

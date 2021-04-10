@@ -7,3 +7,8 @@ runtime/*
 
 vendor/
 bin/
+
+coverage.txt
+codecov.yml
+coverprofile.cov
+
