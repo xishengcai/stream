@@ -198,6 +198,25 @@ func (p *pipeline) Count() int {
 	return len(currentStage.data)
 }
 
+func (p *pipeline) AnyMatch(predicate Predicate) bool {
+	var matched bool = false
+	nextStage := &pipeline{
+		previousStage: p,
+		do: func(nextStage *pipeline, v interface{}) {
+			p.lock.Lock()
+			defer p.lock.Unlock()
+			if predicate(v) {
+				matched = true
+				return
+			}
+		},
+		depth: p.depth + 1,
+	}
+	p.nextStage = nextStage
+	terminal{}.evaluate(p.sourceStage)
+	return matched
+}
+
 // statefulSetOp 装饰器，
 // before： evaluate
 // after：修改sourceStage && p.previousStage.nextStage

@@ -209,3 +209,17 @@ func TestSlice(t *testing.T) {
 
 	t.Log(sts)
 }
+
+func TestAnyMatch(t *testing.T) {
+	students := createStudents(10)
+	matched := New(students, false).AnyMatch(func(v interface{}) bool {
+		return v.(student).age > 1
+	})
+	assert.Equal(t, matched, true)
+
+	matched = New(students, false).AnyMatch(func(v interface{}) bool {
+		return v.(student).age > 1000
+	})
+
+	assert.Equal(t, matched, false)
+}

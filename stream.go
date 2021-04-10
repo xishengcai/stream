@@ -29,6 +29,8 @@ type Streamer interface {
 	ForEach(consumer Consumer)
 	ToSlice(targetSlice interface{})
 	Count() int
+
+	AnyMatch(predicate Predicate) bool
 }
 
 // PredicateOp 断言

@@ -1,3 +1,5 @@
+[![codecov](https://codecov.io/gh/xisehngcai/stream/branch/master/graph/badge.svg)](https://codecov.io/gh/xishengcai/stream)
+
 ## 前言
 golang copy java 轮子(java.util.stream)。
 Stream是java SE8 API添加的用于增加集合的操作接口，可以让你以一种声明的方式处理集合数据。将要处理的集合看作一种流的创建者，将集合内部的元素转换为流并且在管道中传输，并且可以在管道的节点上处理，比如筛选，排序，聚合等。元素流在管道内经过中间操作（intermediate operation）的处理，最后由终端操作（terminal operation）得到前面处理的结果。
@@ -45,7 +47,7 @@ Stream.of(1, 2, 5, 3, 4, 5, 6, 7, 8, 9)
 
 - [x] Map
 - [x] Filter
-- [ ] FlatMap
+- [x] FlatMap
 - [ ] peek
 
 > 中间态 有状态操作
@@ -64,7 +66,7 @@ Stream.of(1, 2, 5, 3, 4, 5, 6, 7, 8, 9)
 - [ ] max
 - [ ] min
 - [ ] forEachOrdered
-- [ ] anyMatch
+- [x] anyMatch
 - [ ] allMatch
 - [ ] noneMatch
 - [ ] findFirst
