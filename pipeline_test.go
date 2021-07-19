@@ -36,7 +36,7 @@ func createStudents(num int) []student {
 	return students
 }
 
-//https://blog.golang.org/laws-of-reflection
+//TestReflect https://blog.golang.org/laws-of-reflection
 func TestReflect(tt *testing.T) {
 	type T struct {
 		A int
@@ -86,12 +86,26 @@ func TestFlatMap(t *testing.T) {
 
 func TestFilter(t *testing.T) {
 	students := createStudents(10)
-	stream := New(students, false)
-	stream.
-		Filter(func(v interface{}) bool {
-			return v.(student).age > 50
-		}).
-		ForEach(func(v interface{}) { fmt.Println(v) })
+
+	t.Run("filter age > 50",
+		func(t *testing.T) {
+			New(students, false).
+				Filter(func(v interface{}) bool {
+					return v.(student).age > 50
+				}).
+				ForEach(func(v interface{}) { fmt.Println(v) })
+		})
+
+	t.Run("filter nil",
+		func(t *testing.T) {
+			var x []interface{}
+			New([]interface{}{nil}, false).
+				Filter(func(v interface{}) bool {
+					return v == nil
+				}).ToSlice(&x)
+			t.Log("x", x)
+		})
+
 }
 
 func TestLimit(t *testing.T) {

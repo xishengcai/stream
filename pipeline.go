@@ -168,7 +168,7 @@ func (p *pipeline) ForEach(consumer Consumer) {
 
 }
 
-// ToSlice, this operation may be panic when your target is not point or
+// ToSlice this operation may be panic when your target is not point or
 // type of target not equal the type of stream transform data
 func (p *pipeline) ToSlice(target interface{}) {
 	targetValue := reflect.ValueOf(target)
@@ -183,6 +183,9 @@ func (p *pipeline) ToSlice(target interface{}) {
 			if p.sourceStage.parallel {
 				p.lock.Lock()
 				defer p.lock.Unlock()
+			}
+			if v == nil {
+				return
 			}
 			sliceValue.Set(reflect.Append(sliceValue, reflect.ValueOf(v)))
 		},
@@ -217,7 +220,7 @@ func (p *pipeline) AnyMatch(predicate Predicate) bool {
 	return matched
 }
 
-// statefulSetOp 装饰器，
+// statefulSetOp
 // before： evaluate
 // after：修改sourceStage && p.previousStage.nextStage
 func statefulSetOp(p *pipeline, handle handleData) *pipeline {
@@ -238,7 +241,7 @@ func statefulSetOp(p *pipeline, handle handleData) *pipeline {
 	return nextStage
 }
 
-// removeDuplicate 数组元素去重
+// removeDuplicate remove duplicate element
 func removeDuplicate(arr []interface{}, comparator Comparator) []interface{} {
 	if arr == nil {
 		return nil
